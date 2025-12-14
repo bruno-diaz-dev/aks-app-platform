@@ -50,6 +50,8 @@ jobs:
           docker stop container-health-ci
     
   release:
+    env:
+      IMAGE_NAME: ghcr.io/bruice83/container-health
     name: Release Image (Manual)
     runs-on: ubuntu-latest
     needs: build
@@ -69,11 +71,11 @@ jobs:
       - name: Build Image
         run: |
           docker build \
-            -t ghcr.io/${{ github.repository_owner }}/container-health:latest \
-            -t ghcr.io/${{ github.repository_owner }}/container-health:sha-${{ github.sha }} \
+            -t $IMAGE_NAME:latest \
+            -t $IMAGE_NAME:sha-${{ github.sha }} \
             ./app
     
       - name: Push image to GHCR
         run: |
-          docker push ghcr.io/${{ github.repository_owner }}/container-health:latest
-          docker push ghcr.io/${{ github.repository_owner }}/container-health:sha-${{ github.sha }}
+          docker push $IMAGE_NAME:latest
+          docker push $IMAGE_NAME:sha-${{ github.sha }}
