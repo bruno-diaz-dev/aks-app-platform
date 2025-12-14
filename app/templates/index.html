@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Container Health Dashboard</title>
+
+    <style>
+        body {
+            font-family:Arial, Helvetica, sans-serif;
+            background-color:#f5f7fa;
+            margin:0;
+            padding:0;
+        }
+
+        .card{
+            background: white;
+            max-width: 500px;
+            margin: auto;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            margin-top: 0;
+            text-align: center;
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            margin: 15px 0;
+            font-size: 18px;
+        }
+
+        .status-ok {
+            color: green;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <h1>Container Health</h1>
+
+        <div class="metric">
+            <span>CPU Usage</span>
+            <span>{{ cpu }}%</span>
+        </div>
+
+        <div class="metric">
+            <span>Memory Usage</span>
+            <span>{{ memory }} MB</span>
+        </div>
+
+        <div class="metric">
+            <span>Uptime</span>
+            <span>{{ uptime }}</span>
+        </div>
+    </div>
+</body>
+</html>
