@@ -51,7 +51,7 @@ jobs:
     
   release:
     env:
-      IMAGE_NAME: ghcr.io/bruice83/container-health
+      IMAGE_NAME: ghcr.io/brucie83/container-health
     name: Release Image (Manual)
     runs-on: ubuntu-latest
     needs: build
