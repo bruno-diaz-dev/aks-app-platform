@@ -67,15 +67,33 @@ jobs:
       - name: Login to Github Container Registry
         run: |
           echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Calculate next version (SemVer PATCH)
+        run: |
+          OLD=$(cat VERSION)
+          IFS='.' read -r M m p <<< "$OLD"
+          NEW="$M.$m.$((p+1))"
+          echo "$NEW" > VERSION
+          echo "VERSION=$NEW" >> $GITHUB_ENV
+          
       
       - name: Build Image
         run: |
           docker build \
-            -t $IMAGE_NAME:latest \
+            -t $IMAGE_NAME:{{ env.VERSION }} \
             -t $IMAGE_NAME:sha-${{ github.sha }} \
             ./app
     
       - name: Push image to GHCR
         run: |
-          docker push $IMAGE_NAME:latest
+          docker push $IMAGE_NAME:{{ env.VERSION }}
           docker push $IMAGE_NAME:sha-${{ github.sha }}
+
+
+      - name: COmmit VERSION bump
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add VERSION
+          git commit -m "chore: release v$VERSION"  || echo "No changes to commit" 
+          git push
