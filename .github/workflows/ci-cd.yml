@@ -86,7 +86,7 @@ jobs:
     
       - name: Push image to GHCR
         run: |
-          docker push $IMAGE_NAME:$VERSION \
+          docker push $IMAGE_NAME:$VERSION
           docker push $IMAGE_NAME:sha-${{ github.sha }}
 
 
