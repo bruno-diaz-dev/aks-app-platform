@@ -103,7 +103,7 @@ jobs:
           git clone https://x-access-token:${GITOPS_TOKEN}@github.com/brucie83/gitops-aks-platform.git
           cd gitops-aks-platform
 
-          sed -i "s|image: ghcr.io/brucie83/container-health:.*|image: ghcr.io/brucie83/container-health:${VERSION}|" ./apps/container-health/deployment.yaml
+          sed -i "s|image: .*|image: ghcr.io/brucie83/container-health:${VERSION}|" ./apps/container-health/deployment.yaml
           
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
