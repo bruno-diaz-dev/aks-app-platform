@@ -95,6 +95,23 @@ jobs:
           docker push $IMAGE_NAME:sha-${{ github.sha }}
 
 
+      - name: Update GitOps repo image tag
+        env:
+          GITOPS_TOKEN: ${{ secrets.GITOPS_REPO_TOKEN }}
+          VERSION: $VERSION
+        run: |
+          git clone https://x-access-token:${GITOPS_TOKEN}@github.com/brucie83/gitops-aks-platform.git
+          cd gitops-aks-platform
+
+          sed -i "s|image: ghcr.io/brucie83/container-health:.*|image: ghcr.io/brucie83/container-health:${VERSION}|" ./apps/container-health/deployment.yaml
+          
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add ./apps/container-health/deployment.yaml
+          git commit -m "chore(gitops): update container-health image to v${VERSION}"
+          git push
+
 #Commit y push del archivo VERSION actualizado al repositorio para mantener el control de versiones
       - name: Commit VERSION bump
         run: |
