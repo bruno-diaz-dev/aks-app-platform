@@ -68,6 +68,8 @@ jobs:
         run: |
           echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
+
+# SemVer PATCH versioning (Calcula la siguiente version de parche de la imagen para evitar usar 'latest' y asi evitar sobrescribir accidentalmente las versiones estables con algo no probado)
       - name: Calculate next version (SemVer PATCH)
         run: |
           OLD=$(cat VERSION)
@@ -76,20 +78,24 @@ jobs:
           echo "$NEW" > VERSION
           echo "VERSION=$NEW" >> $GITHUB_ENV
           
-      
+
+          
+# Build con tags de version creadas con SemVer PATCH y SHA de commit para trazabilidad
       - name: Build Image
         run: |
           docker build \
             -t $IMAGE_NAME:$VERSION \
             -t $IMAGE_NAME:sha-${{ github.sha }} \
             ./app
-    
+ 
+# Push imagenes ya versionada a GHCR            
       - name: Push image to GHCR
         run: |
           docker push $IMAGE_NAME:$VERSION
           docker push $IMAGE_NAME:sha-${{ github.sha }}
 
 
+#Commit y push del archivo VERSION actualizado al repositorio para mantener el control de versiones
       - name: Commit VERSION bump
         run: |
           git config user.name "github-actions"
