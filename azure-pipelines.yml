@@ -12,7 +12,7 @@ variables:
 steps:
 - script: |
     echo "Login to GHCR"
-    echo "$GHCR_TOKEN" | docker login ghcr.io -u "$(GHCR_USERNAME)" --password-sdtin
+    echo "$GHCR_TOKEN" | docker login ghcr.io -u "$(GHCR_USERNAME)" --password-stdin
   displayName: "Docker login to GHCR"
 
 - script: |
