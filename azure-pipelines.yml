@@ -36,7 +36,7 @@ steps:
       --severity HIGH,CRITICAL\
       --exit-code 1 \
       --no-progress \
-      $(IMAGE_NAME):(Build.BuildId)
+      $(IMAGE_NAME):$(Build.BuildId)
   displayName: "Trivy scan image"
 
 - script: |
