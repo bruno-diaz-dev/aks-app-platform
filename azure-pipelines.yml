@@ -24,6 +24,21 @@ steps:
   displayName: "Docker build"
 
 - script: |
+    echo "Installing Trivy"
+    curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+      | sh -s -- -b /usr/local/bin
+  displayName: "Install Trivy"
+
+- script: |
+    echo "Running Trivy image scan"
+    trivy image \
+      --severity HIGH,CRITICAL\
+      --exit-code 1 \
+      --no-progress \
+      $(IMAGE_NAME):(Build.BuildId)
+  displayName: "Trivy scan image"
+
+- script: |
     echo "Push image"
     docker push $(IMAGE_NAME):$(Build.BuildId)
   displayName: "Docker push"
