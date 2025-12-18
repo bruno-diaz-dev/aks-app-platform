@@ -2,7 +2,7 @@ trigger:
 - main
 
 pool:
-  vmIMage: ubuntu-latest
+  name: local-linux
 
 steps:
 - script: echo "Azure DevOps pipeline is alive"
