@@ -1,0 +1,6 @@
+# CVE-2025-62727
+# Reason: FastAPI 0.115.x pins Starlette <0.47.0.
+# Risk: DoS via Range header merging.
+# Mitigation: Application runs behind reverse proxy / ingress.
+# Review: Re-evaluate when FastAPI supports newer Starlette.
+CVE-2025-62727
