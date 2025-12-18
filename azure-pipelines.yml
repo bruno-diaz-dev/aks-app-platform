@@ -17,7 +17,10 @@ steps:
 
 - script: |
     echo "Build image"
-    docker build -t $(IMAGE_NAME):$(Build.BuildId) .
+    docker build \
+      -f app/Dockerfile \
+      -t $(IMAGE_NAME):$(Build.BuildId) \
+      app
   displayName: "Docker build"
 
 - script: |
