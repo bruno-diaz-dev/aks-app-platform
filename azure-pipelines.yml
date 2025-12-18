@@ -1,0 +1,9 @@
+trigger:
+  - main
+
+pool:
+  vmIMage: ubuntu-latest
+
+steps:
+  script: echo "Azure DevOps pipeline is alive"
+  displayName: "Smoke test"
