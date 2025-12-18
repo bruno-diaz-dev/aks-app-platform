@@ -4,6 +4,23 @@ trigger:
 pool:
   name: local-linux
 
+variables:
+- group:  ghcr-secrets
+- name: IMAGE_NAME
+  value: ghcr.io/brucie83/container:health
+
 steps:
-- script: echo "Azure DevOps pipeline is alive"
-  displayName: "Smoke test"
+- script: |
+    echo "Login to GHCR"
+    echo "$GHCR_TOKEN" | docker login ghcr.io -u "$(GHCR_USERNAME)" --password-sdtin
+  displayName: "Docker login to GHCR"
+
+- script: |
+    echo "Build image"
+    docker build -t $(IMAGE_NAME):$(Build.BuildId) .
+  displayName: "Docker build"
+
+- script: |
+    echo "Push image"
+    docker push $(IMAGE_NAME):$(Build.BuildId)
+  displayName: "Docker push"
