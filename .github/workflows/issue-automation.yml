@@ -1,0 +1,15 @@
+name: Issue Automation
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  issue-automation:
+    uses: bruno-diaz-dev/event-processor-minimal/.github/workflows/issue-event-processor-reusable.yml@master
+    with:
+      comment-enabled: true
