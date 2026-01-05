@@ -15,6 +15,11 @@ on:
 permissions:
   contents: write
   packages: write
+  id-token: write
+
+concurrency:
+  group: ci-cd-container-health
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -40,6 +45,15 @@ jobs:
           docker run --rm -d -p 8000:8000 --name container-health-ci container-health:ci
           sleep 5
 
+# Security scan with Trivy
+      - name: Trivy Security Scan
+        env:
+          TRIVY_CACHE_DIR: /tmp/.trivycache
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: container-health:ci
+          severity: CRITICAL, HIGH
+          exit-code: 1
 
       - name: Validate /health endpoint
         run: |
@@ -72,7 +86,8 @@ jobs:
 # SemVer PATCH versioning (Calcula la siguiente version de parche de la imagen para evitar usar 'latest' y asi evitar sobrescribir accidentalmente las versiones estables con algo no probado)
       - name: Calculate next version (SemVer PATCH)
         run: |
-          OLD=$(cat VERSION)
+          test -f VERSION || echo "0.1.0" > VERSION
+          OLD=$(cat VERSION)        
           IFS='.' read -r M m p <<< "$OLD"
           NEW="$M.$m.$((p+1))"
           echo "$NEW" > VERSION
