@@ -137,3 +137,24 @@ jobs:
           git add VERSION
           git commit -m "chore: release v$VERSION"  || echo "No changes to commit" 
           git push
+
+      - name: Clean up local images
+        run: |
+          docker rmi $IMAGE_NAME:$VERSION || true
+          docker rmi $IMAGE_NAME:sha-$GITHUB_SHA || true
+
+
+# Crear un resumen del despliegue en la interfaz de GitHub Actions
+      - name: Deployment summary
+        if: success()
+        run: |
+          {
+            echo "## Deployment Summary"
+            echo ""
+            echo "- **Application:** container-health"
+            echo "- **Image Version:** \`${VERSION}\`"
+            echo "- **Image SHA tag:** \`sha-$GITHUB_SHA\`"
+            echo "- **Source Commit:** \`$GITHUB_SHA\`"
+            echo "- **GitOps Repository:** bruno-diaz-dev/gitops-aks-platform"
+            echo "- **Deployed at:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+          } >> $GITHUB_STEP_SUMMARY
