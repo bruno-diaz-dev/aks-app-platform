@@ -1,5 +1,5 @@
 # Platform ownership
-/.github.workflows/   @bruno-diaz-dev
+/.github/workflows/   @bruno-diaz-dev
 /apps/                @bruno-diaz-dev
 /docs/                @bruno-diaz-dev
 
