@@ -7,7 +7,7 @@ pool:
 variables:
 - group:  ghcr-secrets
 - name: IMAGE_NAME
-  value: ghcr.io/brucie83/container-health
+  value: ghcr.io/bruno-diaz-dev/container-health
 
 steps:
 - script: |
