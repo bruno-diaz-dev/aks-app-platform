@@ -1,0 +1,24 @@
+platform:
+  - changed-files:
+      - any-glob-to-any-file: 'platform/**'
+
+kubernetes:
+  - changed-files:
+      - any-glob-to-any-file: '**/deployment.yaml'
+      - any-glob-to-any-file: '**/service.yaml'
+      - any-glob-to-any-file: '**/namespace.yaml'
+      - any-glob-to-any-file: '**/kustomization.yaml'
+
+ci-cd:
+  - changed-files:
+      - any-glob-to-any-file: '.github/workflows/**'
+      - any-glob-to-any-file: 'azure-pipelines.yml'
+
+docs:
+  - changed-files:
+      - any-glob-to-any-file: '**/*.md'
+      - any-glob-to-any-file: 'docs/**'
+
+application:
+  - changed-files:
+      - any-glob-to-any-file: 'app/**'
