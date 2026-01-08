@@ -1,4 +1,4 @@
-name: PR Automation
+name: PR Automated Comments
 
 on:
   pull_request:
@@ -6,42 +6,95 @@ on:
 
 permissions:
   pull-requests: write
+  contents: read
 
 jobs:
-  pr-comment:
+  pr-comments:
     runs-on: ubuntu-latest
     steps:
       - name: Add PR welcome comment
         uses: actions/github-script@v7
         with:
           script: |
-            const prNumber = context.payload.pull_request.number;
+            const pr = context.payload.pull_request;
             const repo = context.repo;
 
-            const message = `
-             Thanks for opening this Pull Request!
+            const welcomeMessage = `
+              Thanks for opening this Pull Request!
 
             This repository follows a **platform-oriented workflow**.
-            Before requesting review, please ensure:
+            Please make sure that:
 
             • CI pipelines are passing  
-            • Changes are scoped to a single concern  
-            • Platform / Kubernetes changes are documented  
-            • Promotion and rollback considerations are clear  
+            • Changes are scoped and intentional  
+            • Documentation is updated when needed  
 
-            🔍 Reviewers will focus on:
-            • correctness over speed  
-            • promotion safety  
-            • separation of concerns  
+            Reviewers will focus on **correctness, safety, and clarity**.
 
-            Thanks for contributing 🚀
+            Thanks for contributing
             `;
 
             await github.rest.issues.createComment({
               owner: repo.owner,
               repo: repo.repo,
-              issue_number:prNumber,
-              body: message
+              issue_number: pr.number,
+              body: welcomeMessage
             });
-            
-            
+
+      - name: Add platform warning comment (if needed)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const repo = context.repo;
+
+            const files = await github.paginate(
+              github.rest.pulls.listFiles,
+              {
+                owner: repo.owner,
+                repo: repo.repo,
+                pull_number: pr.number,
+                per_page: 100,
+              }
+            );
+
+            const criticalPaths = [
+              'platform/',
+              'kustomization.yaml',
+              'deployment.yaml',
+              'service.yaml',
+              'namespace.yaml',
+              '.github/workflows/'
+            ];
+
+            const touchesCritical = files.some(file =>
+              criticalPaths.some(path =>
+                file.filename.includes(path)
+              )
+            );
+
+            if (!touchesCritical) {
+              console.log('No critical platform changes detected.');
+              return;
+            }
+
+            const platformMessage = `
+              **Platform / Infrastructure changes detected**
+
+            This PR modifies files related to platform or deployment concerns.
+
+            Please ensure:
+            • Environment separation remains intact  
+            • Promotion does not introduce rebuilds  
+            • Rollback via Git is still possible  
+            • Any impact to CI/CD or environments is documented  
+
+            Reviewers may require additional validation before approval.
+            `;
+
+            await github.rest.issues.createComment({
+              owner: repo.owner,
+              repo: repo.repo,
+              issue_number: pr.number,
+              body: platformMessage
+            });
