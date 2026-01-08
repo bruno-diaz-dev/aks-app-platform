@@ -1,0 +1,20 @@
+name: PR Auto Labeling
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Applu labels based on changed files
+        uses: actions/labeler@v5
+        with:
+          configuration-path: .github/labeler.yml

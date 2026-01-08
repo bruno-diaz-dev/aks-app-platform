@@ -1,0 +1,19 @@
+platform:
+  - 'platform/**'
+
+kubernetes:
+  - '**/deployment.yaml'
+  - '**/service.yaml'
+  - '**/namespace.yaml'
+  - '**/kustomization.yaml'
+
+ci-cd:
+  - '.github/workflows/**'
+  - 'azure-pipelines.yml'
+
+docs:
+  - '**/*.md'
+  - 'docs/**'
+
+application:
+  - 'app/**'
