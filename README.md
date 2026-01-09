@@ -1,62 +1,80 @@
 # Container Health Dashboard — Platform Engineering Demo
 
-This repository contains a **cloud-native, containerized application** designed to demonstrate
-**Platform / DevOps engineering practices**, with emphasis on:
+This repository demonstrates **production-oriented Platform / DevOps engineering practices**
+using a simple, cloud-native workload as the vehicle.
 
-- operability
-- promotion strategies
-- CI/CD correctness
-- Kubernetes-ready workloads
+The goal is **not application complexity**, but to showcase **how a platform is designed,
+governed, released, and operated** with enterprise-grade rigor.
 
-The focus of this project is **platform design and lifecycle management**, not application complexity.
+---
+
+## What This Repository Demonstrates
+
+- CI/CD correctness and enforcement
+- Promotion without rebuilds (build once, promote many)
+- Governance via required checks and code ownership
+- Kubernetes-ready workloads with clear separation of concerns
+- Auditability and rollback via Git history
+- Platform thinking over tool-specific implementations
+
+This is a **platform demo**, not a tutorial.
 
 ---
 
 ## Application Overview
 
-The application is a lightweight **FastAPI-based dashboard** that exposes:
+The application is a lightweight **FastAPI-based container health dashboard** exposing:
 
-- `/health` — standard health endpoint for Kubernetes probes
-- `/` — HTML dashboard displaying:
+- `GET /health`  
+  Standard health endpoint suitable for Kubernetes liveness/readiness probes
+
+- `GET /`  
+  HTML dashboard showing:
   - container health status
   - CPU usage
   - memory usage
   - container uptime
 
-This mirrors how internal platform or SRE-owned services expose runtime visibility
+This mirrors how internal platform or SRE-owned services expose runtime data
 to support operations and troubleshooting.
 
 ---
 
-## Containerization
+## Containerization Strategy
 
 The application is packaged as a Docker image using:
 
-- Python 3.11 (slim base image)
+- Python 3.11 (slim)
 - FastAPI + Uvicorn
 - psutil for runtime metrics
 - Jinja2 for lightweight HTML rendering
 
-The Docker image is designed to be:
+Design goals:
 
-- fast to build
-- deterministic
+- deterministic builds
+- fast startup
+- no environment-specific configuration
 - suitable for Kubernetes workloads
-- free of environment-specific configuration
 
 ---
 
 ## CI / CD Design Overview
 
-This repository intentionally demonstrates **tool-agnostic CI/CD design** using
-multiple CI platforms.
+This repository intentionally uses **multiple CI systems** to demonstrate
+**tool-agnostic pipeline design**.
 
-- **GitHub Actions** — primary CI and release automation
-- **Azure DevOps** — complementary pipeline showcasing enterprise security scanning
-  on a self-hosted agent
+- **GitHub Actions**
+  - primary CI
+  - build and runtime validation
+  - release automation
 
-Different platforms are used **by design** to demonstrate architectural decisions
-around security boundaries, execution environments, and control.
+- **Azure DevOps**
+  - complementary pipeline
+  - enterprise-style security scanning
+  - controlled execution on a self-hosted agent
+
+Using more than one CI system is **intentional**, reflecting real-world
+security and execution boundary decisions.
 
 ---
 
@@ -80,35 +98,35 @@ CI focuses strictly on **build correctness and runtime validation**.
 
 ## Security & Image Scanning
 
-Container image vulnerability scanning is implemented in the **Azure DevOps pipeline**
+Container image vulnerability scanning is implemented in **Azure DevOps**
 using **Trivy**.
 
-Security responsibilities include:
+Security behavior:
 
-- image scanning before release
-- blocking on **HIGH** and **CRITICAL** vulnerabilities
-- allowing documented and temporary CVE exceptions when mitigated by architecture
+- scans images before release
+- blocks on **HIGH** and **CRITICAL** vulnerabilities
+- supports documented and time-bound CVE exceptions when mitigated by architecture
 
-GitHub Actions focuses on automation and speed, while Azure DevOps demonstrates
-**enterprise-style security gating** on a controlled execution environment.
+GitHub Actions prioritizes speed and feedback, while Azure DevOps demonstrates
+**enterprise security gating**.
 
 ---
 
 ## Release & Promotion Model
 
-This project follows a **build once, promote many** strategy.
+This project follows a strict **build once, promote many** strategy.
 
-- The container image is built **once**
-- The same image is promoted across environments
-- No environment-specific rebuilds occur
+- the container image is built **once**
+- the same image is promoted across environments
+- no environment-specific rebuilds occur
 
-Release actions are triggered **manually** to ensure:
+Releases are triggered **manually** to ensure:
 
 - explicit operator intent
-- controlled releases
+- controlled promotions
 - no accidental deployments
 
-Images are tagged as:
+Image tagging strategy:
 
 - `latest`
 - `sha-<commit>`
@@ -117,7 +135,8 @@ Images are tagged as:
 
 ## Platform & Environment Design
 
-Kubernetes configuration is structured to clearly separate responsibilities using **Kustomize**.
+Kubernetes configuration is structured using **Kustomize**
+to separate platform concerns from application concerns.
 
 ### Platform bootstrap
 
@@ -125,9 +144,11 @@ Kubernetes configuration is structured to clearly separate responsibilities usin
 platform/namespaces/
 ```
 
-- One namespace per environment (`dev`, `stage`, `prod`)
-- Created once
-- Not versioned with application releases
+- one namespace per environment (`dev`, `stage`, `prod`)
+- created once
+- not versioned with application releases
+
+---
 
 ### Application base
 
@@ -135,10 +156,12 @@ platform/namespaces/
 platform/apps/container-health/base/
 ```
 
-- Environment-agnostic manifests
-- No namespaces
-- No image tags
-- Reusable across all environments
+- environment-agnostic manifests
+- no namespaces
+- no image tags
+- reusable across all environments
+
+---
 
 ### Environment overlays
 
@@ -148,7 +171,7 @@ platform/apps/container-health/stage
 platform/apps/container-health/prod
 ```
 
-Each environment overlay defines:
+Each overlay defines:
 
 - target namespace
 - promoted image tag
@@ -160,7 +183,7 @@ No rebuilds are required to promote or roll back a release.
 
 ---
 
-## Platform Flow Diagram
+## Platform Flow
 
 ```text
                    ┌─────────────────────┐
@@ -212,9 +235,13 @@ No rebuilds are required to promote or roll back a release.
 
 ## Local Development
 
+Build the image:
+
 ```bash
 docker build -t container-health:local ./app
 ```
+
+Run locally:
 
 ```bash
 docker run --rm -p 8000:8000 container-health:local
@@ -227,16 +254,30 @@ Access:
 
 ---
 
-## Notes & Intent
+## Governance & Decisions
+
+Significant platform decisions are documented as **Platform Decision Records (PDRs)**:
+
+- `docs/pdr/001-ci-and-governance-enforcement.md`
+
+Some pull requests are intentionally **not merged** to demonstrate:
+
+- required CI checks
+- code owner enforcement
+- prevention of self-approval
+
+This mirrors real production governance.
+
+---
+
+## Intent
 
 - Kubernetes deployment is intentionally **not auto-executed** in CI/CD
 - Manifests are validated but require a target cluster
 - The design supports:
   - environment approvals
-  - promotion strategies
+  - controlled promotions
   - future GitOps workflows
 
-This repository intentionally focuses on **platform design, promotion strategy,
-and CI/CD correctness**, rather than cloud-specific infrastructure provisioning.
-# test
-# test
+This repository prioritizes **platform design, promotion strategy,
+and CI/CD enforcement** over cloud-specific infrastructure provisioning.
