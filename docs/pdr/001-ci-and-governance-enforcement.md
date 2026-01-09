@@ -63,3 +63,9 @@ This setup mirrors enterprise platform teams where:
 ## Notes
 
 This decision prioritizes correctness and auditability over convenience. In a real team, additional reviewers would be required to complete the workflow.
+
+
+## Evidence
+
+- Pull Request #16: Governance and CI enforcement validation  
+  (PR intentionally closed without merge to demonstrate enforcement behavior)
