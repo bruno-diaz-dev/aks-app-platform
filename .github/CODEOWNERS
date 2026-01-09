@@ -1,7 +1,12 @@
-# Platform ownership
-/.github/workflows/   @bruno-diaz-dev
-/apps/                @bruno-diaz-dev
-/docs/                @bruno-diaz-dev
+# CI/CD and platform governance
+.github/workflows/ @bruno-diaz-dev
+azure-pipelines.yml @bruno-diaz-dev
 
-# Default
-*                     @bruno-diaz-dev
+# Platform GitOps (AKS, kustomize, namespaces)
+/platform/ @bruno-diaz-dev
+
+# Platform documentation
+/docs/ @bruno-diaz-dev
+
+# Application demo (less restrictive)
+/app/ @bruno-diaz-dev
