@@ -1,4 +1,4 @@
-name: CI-CD - Container Health app 
+name: CI-CD - Container Health Platform
 
 on:
   push:
@@ -7,10 +7,17 @@ on:
     branches: ["main"]
   workflow_dispatch:
     inputs:
-      deploy:
-        description: "Deploy image and apply kubernetes manifests"
+      environment:
+        description: Target environment to promote
         required: true
-        default: "false"
+        type: choice
+        options:
+          - dev
+          - stage
+          - prod
+      image_tag:
+        description: Image tag to promote (e.g. sha-abcdef)
+        required: true
 
 permissions:
   contents: write
@@ -21,147 +28,96 @@ concurrency:
   group: ci-cd-container-health
   cancel-in-progress: true
 
+env:
+  IMAGE_NAME: ghcr.io/bruno-diaz-dev/container-health
+
+# -----------------------------
+# CI — build once
+# -----------------------------
 jobs:
   ci:
-    name: ci
+    name: CI
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
-      - name: Run Tests
-        run: echo "ok"
-  build:
-    name: Build and test image
-    runs-on: ubuntu-latest
-    
-    steps:
 
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Run tests
+        run: echo "ok"
+
+  build:
+    name: Build, scan and push image
+    runs-on: ubuntu-latest
+    needs: ci
+
+    steps:
+      - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker Image (CI)
+      - name: Login to GHCR
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} \
+            | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build image (single source of truth)
         run: |
           docker build \
-            -t container-health:ci \
+            -t $IMAGE_NAME:sha-${{ github.sha }} \
             ./app
-          
-      - name: Run container for healthcheck
-        run: |
-          docker run --rm -d -p 8000:8000 --name container-health-ci container-health:ci
-          sleep 5
 
-# Security scan with Trivy
-      - name: Trivy Security Scan
-        env:
-          TRIVY_CACHE_DIR: /tmp/.trivycache
+      - name: Trivy security scan
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: container-health:ci
+          image-ref: $IMAGE_NAME:sha-${{ github.sha }}
           severity: CRITICAL,HIGH
           exit-code: 1
 
-      - name: Validate /health endpoint
-        run: |
-          curl --fail http://localhost:8000/health
-
-      - name: Stop container
-        run: |
-          docker stop container-health-ci
-    
-  release:
-    env:
-      IMAGE_NAME: ghcr.io/bruno-diaz-dev/container-health
-    name: Release Image (Manual)
-    runs-on: ubuntu-latest
-    needs: build
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy == 'true' }}
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Github Container Registry
-        run: |
-          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-
-
-# SemVer PATCH versioning (Calcula la siguiente version de parche de la imagen para evitar usar 'latest' y asi evitar sobrescribir accidentalmente las versiones estables con algo no probado)
-      - name: Calculate next version (SemVer PATCH)
-        run: |
-          test -f VERSION || echo "0.1.0" > VERSION
-          OLD=$(cat VERSION)        
-          IFS='.' read -r M m p <<< "$OLD"
-          NEW="$M.$m.$((p+1))"
-          echo "$NEW" > VERSION
-          echo "VERSION=$NEW" >> $GITHUB_ENV
-          
-
-          
-# Build con tags de version creadas con SemVer PATCH y SHA de commit para trazabilidad
-      - name: Build Image
-        run: |
-          docker build \
-            -t $IMAGE_NAME:$VERSION \
-            -t $IMAGE_NAME:sha-${{ github.sha }} \
-            ./app
- 
-# Push imagenes ya versionada a GHCR            
       - name: Push image to GHCR
         run: |
-          docker push $IMAGE_NAME:$VERSION
           docker push $IMAGE_NAME:sha-${{ github.sha }}
 
+# -----------------------------
+# RELEASE — promotion only
+# -----------------------------
+  release:
+    name: Promote image
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'workflow_dispatch'
+    environment: ${{ inputs.environment }}
 
-      - name: Update GitOps repo image tag
-        env:
-          GITOPS_TOKEN: ${{ secrets.GITOPS_REPO_TOKEN }}
-          VERSION: ${{ env.VERSION }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate image tag exists
         run: |
-          echo "Using version: $VERSION"
-          test -n "${VERSION}"
-          git clone https://x-access-token:${GITOPS_TOKEN}@github.com/bruno-diaz-dev/gitops-aks-platform.git
-          cd gitops-aks-platform
+          docker manifest inspect \
+            $IMAGE_NAME:${{ inputs.image_tag }}
 
-          sed -i "s|image: .*|image: ghcr.io/bruno-diaz-dev/container-health:${VERSION}|" ./apps/container-health/deployment.yaml
-          
+      - name: Promote image via GitOps
+        run: |
+          echo "Promoting $IMAGE_NAME:${{ inputs.image_tag }} to ${{ inputs.environment }}"
+
+          echo "${{ inputs.image_tag }}" \
+            > platform/apps/container-health/${{ inputs.environment }}/image-tag.txt
+
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add ./apps/container-health/deployment.yaml
-          git commit -m "chore(gitops): update container-health image to v${VERSION}"
+          git add platform/apps/container-health/${{ inputs.environment }}/image-tag.txt
+          git commit -m "chore(release): promote container-health to ${{ inputs.environment }} (${{
+            inputs.image_tag }})"
           git push
 
-#Commit y push del archivo VERSION actualizado al repositorio para mantener el control de versiones
-      - name: Commit VERSION bump
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git add VERSION
-          git commit -m "chore: release v$VERSION"  || echo "No changes to commit" 
-          git push
-
-      - name: Clean up local images
-        run: |
-          docker rmi $IMAGE_NAME:$VERSION || true
-          docker rmi $IMAGE_NAME:sha-$GITHUB_SHA || true
-
-
-# Crear un resumen del despliegue en la interfaz de GitHub Actions
       - name: Deployment summary
-        if: success()
         run: |
           {
-            echo "## Deployment Summary"
+            echo "## Promotion Summary"
             echo ""
-            echo "- **Application:** container-health"
-            echo "- **Image Version:** \`${VERSION}\`"
-            echo "- **Image SHA tag:** \`sha-$GITHUB_SHA\`"
-            echo "- **Source Commit:** \`$GITHUB_SHA\`"
-            echo "- **GitOps Repository:** bruno-diaz-dev/gitops-aks-platform"
-            echo "- **Deployed at:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+            echo "- Environment: **${{ inputs.environment }}**"
+            echo "- Image: \`${IMAGE_NAME}:${{ inputs.image_tag }}\`"
+            echo "- Commit: \`${{ github.sha }}\`"
+            echo "- Time: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
           } >> $GITHUB_STEP_SUMMARY
