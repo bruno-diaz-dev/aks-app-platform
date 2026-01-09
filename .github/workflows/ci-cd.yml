@@ -31,17 +31,12 @@ concurrency:
 env:
   IMAGE_NAME: ghcr.io/bruno-diaz-dev/container-health
 
-# -----------------------------
-# CI — build once
-# -----------------------------
 jobs:
   ci:
     name: CI
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-
       - name: Run tests
         run: echo "ok"
 
@@ -49,75 +44,94 @@ jobs:
     name: Build, scan and push image
     runs-on: ubuntu-latest
     needs: ci
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v3
 
       - name: Login to GHCR
         run: |
-          echo ${{ secrets.GITHUB_TOKEN }} \
-            | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          echo "${{ secrets.GITHUB_TOKEN }}" \
+            | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-      - name: Build image (single source of truth)
+      - name: Build image
         run: |
           docker build \
             -t $IMAGE_NAME:sha-${{ github.sha }} \
             ./app
 
-      - name: Trivy security scan
+      - name: Trivy scan
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: $IMAGE_NAME:sha-${{ github.sha }}
           severity: CRITICAL,HIGH
           exit-code: 1
 
-      - name: Push image to GHCR
+      - name: Push image
         run: |
           docker push $IMAGE_NAME:sha-${{ github.sha }}
 
-# -----------------------------
-# RELEASE — promotion only
-# -----------------------------
   release:
-    name: Promote image
+    name: Promote image via PR
     runs-on: ubuntu-latest
     needs: build
     if: github.event_name == 'workflow_dispatch'
     environment: ${{ inputs.environment }}
 
+    env:
+      PROMOTION_BRANCH: promote-${{ inputs.environment }}-${{ inputs.image_tag }}
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate image tag exists
+      - name: Create promotion branch
         run: |
-          docker manifest inspect \
-            $IMAGE_NAME:${{ inputs.image_tag }}
+          git checkout -b $PROMOTION_BRANCH
 
-      - name: Promote image via GitOps
+      - name: Update image tag
         run: |
-          echo "Promoting $IMAGE_NAME:${{ inputs.image_tag }} to ${{ inputs.environment }}"
-
           echo "${{ inputs.image_tag }}" \
             > platform/apps/container-health/${{ inputs.environment }}/image-tag.txt
 
+      - name: Commit change
+        run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-
           git add platform/apps/container-health/${{ inputs.environment }}/image-tag.txt
-          git commit -m "chore(release): promote container-health to ${{ inputs.environment }} (${{
-            inputs.image_tag }})"
-          git push
+          git commit -m "chore(release): promote container-health to ${{ inputs.environment }} (${{ inputs.image_tag }})"
 
-      - name: Deployment summary
+      - name: Push promotion branch
+        run: |
+          git push origin $PROMOTION_BRANCH
+
+      - name: Create Pull Request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cat <<'EOF' > pr-body.md
+          Automated promotion of image `${{ inputs.image_tag }}` to **${{ inputs.environment }}**.
+          This PR is intentionally subject to:
+          - required CI checks
+          - code owner review
+          - branch protection rules.
+          EOF
+          gh pr create \
+          --base main \
+            --head "$PROMOTION_BRANCH" \
+            --title "chore(release): promote container-health to ${{ inputs.environment }}" \
+            --body-file pr-body.md
+            
+
+
+
+
+      - name: Promotion summary
         run: |
           {
             echo "## Promotion Summary"
             echo ""
             echo "- Environment: **${{ inputs.environment }}**"
             echo "- Image: \`${IMAGE_NAME}:${{ inputs.image_tag }}\`"
-            echo "- Commit: \`${{ github.sha }}\`"
+            echo "- Branch: \`${PROMOTION_BRANCH}\`"
             echo "- Time: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
           } >> $GITHUB_STEP_SUMMARY
