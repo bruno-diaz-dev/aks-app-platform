@@ -1,0 +1,21 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: container-health
+  namespace: monitoring
+  labels:
+    release: monitoring
+
+spec:
+  selector:
+    matchLabels:
+      app: container-health
+  namespaceSelector:
+    matchNames:
+      - container-health-dev
+      - container-health-stage
+      - container-health-prod
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s

@@ -2,11 +2,14 @@ apiVersion: v1
 kind: Service
 metadata:
   name: container-health
-  namespace: container-health
+  labels:
+    app: container-health
 spec:
   selector:
     app: container-health
   ports:
-    - port: 80
+    - name: http
+      protocol: TCP
+      port: 80
       targetPort: 8000
   type: ClusterIP

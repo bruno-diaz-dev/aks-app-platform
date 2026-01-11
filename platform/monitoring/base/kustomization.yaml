@@ -1,0 +1,2 @@
+resources:
+  - servicemonitor-container-health.yaml
