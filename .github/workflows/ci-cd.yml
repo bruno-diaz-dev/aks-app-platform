@@ -95,19 +95,23 @@ jobs:
           TAG="${{ inputs.image_tag }}"
           DEV_TAG_FILE="platform/apps/container-health/dev/image-tag.txt"
 
-          if [[ "$ENV" == "dev"]]; then
+          echo "Validating promotion order..."
+          echo "Target environment: $ENV"
+          echo "Image tag: $TAG"
+
+          if [ "$ENV" == "dev"]; then
             echo "Promoting to dev; no prior validation required"
             exit 0 # OK
           fi
 
-          if [[ ! -f "$DEV_TAG_FILE" ]]; then
+          if [ ! -f "$DEV_TAG_FILE" ]; then
             echo "ERROR: Dev image-tag file not found. Cannot promote to $ENV"
             exit 1 # ERROR
           fi
 
           DEV_TAG=$(cat "$DEV_TAG_FILE" | tr -d '\n')
 
-          if [[ "$DEV_TAG" != "$TAG" ]]; then
+          if [ "$DEV_TAG" != "$TAG" ]; then
             echo "ERROR: Image '$TAG' has not been promoted to dev."
             exit 1 # ERROR
           fi
