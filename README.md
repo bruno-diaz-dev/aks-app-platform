@@ -185,7 +185,7 @@ No rebuilds are required to promote or roll back a release.
 
 ## Platform Flow
 
-```text
+```mermaid
                    ┌─────────────────────┐
                    │     Developer        │
                    │   (git commit)       │
